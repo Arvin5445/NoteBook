@@ -276,7 +276,7 @@
 
 
 
-### 1. 安全点
+### 1. 安全点（OopMap）
 
 > ​		导致OopMap内容变化的指令非常多，如果为每一条指令都生成对应的OopMap，那将会需要大量的额外空间，这样GC的空间成本将会变得很高。
 >
@@ -891,6 +891,60 @@ public class ClinitTest{
 <img src="/Users/arvin/Library/Application Support/typora-user-images/image-20200316155843233.png" alt="image-20200316155843233" style="zoom:67%;" />
 
 
+
+
+
+## 互斥同步
+
+### synchronized（管程）
+
+​		synchronized关键字经过编译之后，会在同步块的前后分别形成monitorenter和monitorexit这两个字节码指令，这两个字节码都需要一个reference类型的参数来指明要锁定和解锁的对象。如果Java程序中的 synchronized明确指定了对象参数，那就是这个对象的reference；如果没有明确指定，那就根 据synchronized修饰的是实例方法还是类方法，去取对应的对象实例或Class对象来作为锁对象。
+
+​		在执行monitorenter指令时，首先要尝试获取对象的锁。如果这 个对象没被锁定，或者当前线程已经拥有了那个对象的锁，把锁的计数器加1，相应的，在 执行monitorexit指令时会将锁计数器减1，当计数器为0时，锁就被释放。如果获取对象锁失 败，那当前线程就要阻塞等待，直到对象锁被另外一个线程释放为止。
+
+​		synchronized同步块对同一条线程来说是**可重入**的。
+
+
+
+### ReentrantLock（java.util.concurrent）
+
+​		ReentrantLock与synchronized很相似，他们都 具备一样的线程**重入**特性，只是代码写法上有点区别，一个表现为**API层面（AQS）**的互斥锁 （`lock()`和 `unlock()` 方法配合 `try/finally` 语句块来完成），另一个表现为**原生语法层面**的互斥锁。不过，相比synchronized,ReentrantLock增加了一些高级功能，主要有以下3项：
+
++ 等待可中断 `tryLock()`
++ 可实现公平锁 `new ReentrantLock(false)`
++ 以及锁可以绑定多个条件 `condition`
+
+
+
+## 非阻塞同步
+
+### CAS 比较并交换（Compare-and-Swap）
+
+​		在 JDK 1.5之后，Java程序中才可以使用CAS操作，该操作由sun.misc.Unsafe类里面的 compareAndSwapInt（）和compareAndSwapLong（）等几个方法包装提供，虚拟机在内部对 这些方法做了特殊处理，即时编译出来的结果就是一条平台相关的处理器CAS指令，没有方 法调用的过程，或者可以认为是无条件内联进去了。
+
+​		CAS指令需要有3个操作数，分别是内存位置（在Java中可以简单理解为变量的内存地址，用V表示）、旧的预期值（用A表示）和新值（用B表示）。CAS指令执行时，当且仅当V符合旧预期值A时，处理器用新值B更新V的值，否则它就不执行更新，但是无论是否更新 了V的值，都会返回V的旧值，上述的处理过程是一个**原子操作**。
+
+### “ABA” 问题
+
+​		J.U.C包为了解决这个问题， 提供了一个带有标记的原子引用类“AtomicStampedReference”，它可以通过控制变量值的**版本**来保证CAS的正确性。不过目前来说这个类比较“鸡肋”，大部分情况下ABA问题不会影响程 序并发的正确性，如果需要解决ABA问题，改用传统的互斥同步可能会比原子类更高效。
+
+### 无同步方案
+
++ 可重入代码（Reentrant Code）
+
+  ​		不依赖存储在堆上的数据和公用的系统资源、用到 的状态量都由参数中传入、不调用非可重入的方法，返回结果是可以预测的，只要输入了相同的数 据，就都能返回相同的结果
+
++ 线程本地存储（Thread Local Storage）
+
+  ​		如果一段代码中所需要的数据必须与其他代码共享，那就看看这些共享数据的代码是否能保证在同一个线程中执行？如果能保证，我们就可以把共享数据的可见范围限制在同一个线程之内 `java.lang.ThreadLocal` ，这样，无须同步也能保证线程之间不出 现数据争用的问题。
+
+  > 符合这种特点的应用并不少见，大部分使用消费队列的架构模式（如“生产者-消费 者”模式）都会将产品的**消费过程尽量在一个线程中消费完**，其中最重要的一个应用实例就 是经典Web交互模型中的**“一个请求对应一个服务器线程”**（Thread-per-Request）的处理方 式，这种处理方式的广泛应用使得很多Web服务端应用都可以使用线程本地存储来解决线程 安全问题。
+
+
+
+## 锁优化
+
+适应性自旋（Adaptive Spinning）、锁消除 （Lock Elimination）、锁粗化（Lock Coarsening）、轻量级锁（Lightweight Locking）和偏向 锁（Biased Locking）
 
 
 
