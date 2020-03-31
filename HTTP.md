@@ -89,7 +89,8 @@ HTTPS使用SSL安全协议来保障安全性。具体体现在密钥和证书验
 + 状态行
 + 响应头
 + 响应体
-  <img src="file:////private/var/folders/nq/c0jgjyfj3ld3xjykp1z9dhlw0000gn/T/com.kingsoft.wpsoffice.mac/wps-arvin/ksohtml/wps9hyXHs.png" alt="img" style="zoom: 50%;" />
+
+![img](https://images2017.cnblogs.com/blog/1090126/201711/1090126-20171115074903718-2136115327.png)
 
 
 
