@@ -94,7 +94,31 @@ HTTPS使用SSL安全协议来保障安全性。具体体现在密钥和证书验
 
 
 
+# 请求头
 
+##### ① 通用首部字段
+
+请求报文和响应报文两方都会使用的首部
+
+![img](https://img-blog.csdn.net/20180520002110491?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L0FsZXhzaGk1/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70)
+
+##### ② 请求首部字段
+
+从客户端向服务器端发送请求报文时使用的首部
+
+![img](https://img-blog.csdn.net/20180520002238786?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L0FsZXhzaGk1/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70)
+
+##### ③ 响应首部字段
+
+从服务器端向客户端返回响应报文时使用的首部
+
+![img](https://img-blog.csdn.net/20180520002319248?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L0FsZXhzaGk1/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70)
+
+##### ④ 实体首部字段
+
+针对请求报文和响应报文实体部分使用的首部
+
+![img](https://img-blog.csdn.net/20180520002345362?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L0FsZXhzaGk1/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70)
 
 
 

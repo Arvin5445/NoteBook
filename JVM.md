@@ -94,7 +94,7 @@
 
 ### 1. 引用计数法（JVM 不使用）
 
-​		一个对象被引用其引用值就+1，取消引用就-1，很难解决循环引用的问题
+​		一个对象被引用其引用值就+1，取消引用就-1，很难解决循环引用的问题（两个对象永远不会被回收，内存泄漏）
 
 ### 2. 可达性分析法（JVM 使用）
 
@@ -103,12 +103,15 @@
 ![img](https://img-blog.csdnimg.cn/20190506204803732.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM2NjI1NzU3,size_16,color_FFFFFF,t_70)
 
 
-哪些对象可以作为GC Roots
+哪些对象可以作为GC Roots：
 
 虚拟机栈（栈帧中的局部变量区，也叫做局部变量表）中引用的对象。
-方法区中的类静态属性引用的对象。
-方法区中常量引用的对象。
+
 本地方法栈中JNI(Native方法)引用的对象。
+
+方法区中的类静态属性引用的对象。
+
+方法区中常量引用的对象。
 
 
 
@@ -1084,7 +1087,7 @@ public class ClinitTest{
 
 ==-XX:+PrintSafepointStatistics -XX:PrintSafepointStatisticsCount=1 这两个参数会打印出详细信息==
 
--XX:+PrintGCDetails：打印GC信息
+==-XX:+PrintGCDetails：打印GC信息==
 
 -XX:+PrintGCTimeStamps ：打印每次GC的时间戳（现在距离启动的时间长度）
 
