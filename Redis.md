@@ -248,19 +248,30 @@ keyspace 键值统计
 
 
 
-# 击穿
+# 缓存击穿
 
 hot key 永不过期
 
 布隆过滤器 拦截
 
-默认值
+默认值（加载中。。。）
 
-设置 set -1 null
+设置 set -1 null（给不存在的值设置缓存）
 
-分布式锁 set nx expire
+互斥锁：分布式锁 set nx expire
 
-二级缓存
+```
+从 Redis 2.6.12 版本开始， SET 命令的行为可以通过一系列参数来修改：
+
+EX second ：设置键的过期时间为 second 秒。 SET key value EX second 效果等同于 SETEX key second value 。
+PX millisecond ：设置键的过期时间为 millisecond 毫秒。 SET key value PX millisecond 效果等同于 PSETEX key millisecondvalue 。
+NX ：只在键不存在时，才对键进行设置操作。 SET key value NX 效果等同于 SETNX key value 。
+XX ：只在键已经存在时，才对键进行设置操作。
+```
+
+
+
+二级（多级）缓存
 
 随机过期时间
 
@@ -407,27 +418,41 @@ cluster-config-file "node-6379.conf" //如果不配会自动生成，不需要�
 
 
 
-
-
 哈希
 
-槽 `slot` （0 ～ 16383）
+**==槽 `slot` （0 ～ 16383）==**
 
 + 解耦数据和节点之间的关系，简化扩容和收缩
 + 节点自身维护槽的映射关系，无需客户端或第三方代理服务操心
 + 支持键（key）、槽（slot）、节点（node）的映射查询，用于数据路由和在线伸缩
 
-### 功能限制
+### 功能限制（缺点）
 
-+ mset，mget只支持相同slot的key
++ mset，mget只支持相同slot的key（可以用{}大括号解决）
 + 涉及不同节点，无法使用事务
 + 无法将bigkey，比如hash、list分配到不同节点
++ pipeline也受限制（可以用{}大括号解决）
++ 发布订阅引发大量网络IO
++ 分成多次请求造成大量网络IO
 
-### 节点握手
+### 节点握手，通信
 
-Gossip协议，感知对方的过程
+**Gossip（流言）协议**（频繁交换信息，信息扩散），感知对方的过程，单独TCP通道（基础端口 + 1000）
+
+定时任务选举出本次联系人（每秒10次）
+
+**接收到消息后：**新节点 ? meet : 更新该节点状态到本地; 回复pong消息;
+
++ meet
++ ping
++ pong
++ fail
+
+**消息头**（clusterMsg，包含分区槽，复制偏移，消息类型，nodeId，端口等）+ **消息体**（clusterMsgData，包含自身信息和十分之一的其他节点信息（集群不能过大））
 
 异步命令：`cluster meet {ip} {port}`
+
+`cluser replicate {nodeId}`
 
 对方用pong来相应meet
 
@@ -439,5 +464,64 @@ Gossip协议，感知对方的过程
 
 **==只有当16383个槽全部分配给节点后，集群才进入在线状态 fail->ok==**
 
+否则任何键命令都会返回错误 `(error) CLUSTERDOWN Hash slot not served`
+
+`cluster addslots {0..5416}` 分配槽
+
+`cluster keyslot {key}` 返回key所对应的槽
+
+### 伸缩
+
+1. 运行新节点（集群模式）
+2. 加入集群（meet）
+3. 迁移槽（setslot importing migrating migrate）
+
+下线的节点应该被剩余节点忘记
+
+`cluster forget {downNodeId}`
+
+`cluster node` 中不再包含 {downNodeId}
+
+### 请求路由
+
+收到任何key相关命令，首先计算对应槽（slot），再根据槽找出对应节点
+
+如果节点为自身，则自行处理
+
+否则回复 `(error) MOVE {ip} {slot}` 重定向错误，通知客户端请求正确的节点
+
+`redis-cli -p 6379 -c`     -c可以让客户端支持自动重定向（此功能在redis-cli内部维护，而非redis数据节点）
 
 
+
+### 故障转移
+
+**主观下线：** 流言ping pong会记录最近通讯时间，当超过 `cluster-node-time-out`，标记此节点为主观下线
+
+**客观下线：** 主观下线消息在集群内留言传播（每个节点有张表维护），当大半**主节点**收到此消息时，触发尝试客观下线流程
+
+1. 统计认为此节点挂了的节点数量（通过表）
+2. 若大于一般，则确认客观下线
+3. 广播 `fail {nodeId}` ，通知所有节点客观下线，立即生效，通知下线节点的从节点启动故障转移
+
+**故障转移：**
+
+1. 资格检查：排除掉不合格的（与主短线超过阈值）
+2. 准备选举时间：（延迟选举，通过不同的延迟时间来解决优先级问题（offset））
+3. 选举：更新配置纪元，广播选举消息（超时投票会作废，重新投票）
+4. 选举投票：主节点才能投（cluster的新M选举=se的领导者选举，从数量无需>=3）
+   1. 替换主节点：从节点取消复制（slave of）变为主节点，`clusterDelSlot; clusterAddSlot` ，向集群广播 `pong` 来通知
+5. 统计耗时
+
+
+
+### 故障转移失败：
+
++ 主从同时故障
++ 所有从都不合格
++ 网络问题导致（投票一直超时作废）
++ 一半以上主节点挂了
+
+
+
+# 端口：6379

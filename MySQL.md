@@ -1,5 +1,3 @@
-[TOC]
-
 # 1. MyISAM 与 InnoDB 的区别
 
 https://blog.csdn.net/qq_35642036/article/details/82820178
@@ -88,7 +86,7 @@ https://blog.csdn.net/qq_35642036/article/details/82820178
 
 # 2. explain 执行计划
 
-https://www.cnblogs.com/tufujie/p/9413852.html
+[MySQL Explain详解](https://www.cnblogs.com/tufujie/p/9413852.html)
 
 **type:**
 
@@ -140,7 +138,7 @@ https://www.cnblogs.com/tufujie/p/9413852.html
 -- 开始事务（三者选一个）
 begin;/begin work;/start transaction;
 
--- 关闭自动提交
+-- 关闭自动提交（其实不需要这句，此区间内不会自动提交）
 set autocommit=off
 
 -- 使用了select...for update方式，通过开启排他锁的方式实现了悲观锁。则相应的记录被锁定，其他事务必须等本次事务提交之后才能够执行
@@ -311,6 +309,14 @@ Mysql目前主要有以下几种索引类型：**FULLTEXT，HASH，BTREE，RTREE
 
 
 # 5. 事务
+
+## 0. 事务原理
+
+mvcc（多版本并发控制）乐观锁思想，维护了一条版本链
+
+undo 日志（撤销用）
+
+（redo日志是刷盘用的（批量刷盘，减少磁盘IO）LRU（先刷冷门的，热点后刷））
 
 > ==当autocommit为开启状态时（默认开启）==
 >
