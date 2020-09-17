@@ -1,6 +1,6 @@
 # Elasticsearch
 
-
+> 基于 Elasticsearch [5.4]
 
 # 特点
 
@@ -123,6 +123,27 @@ GET _cat/indices?v
 
 ## 类别（Type）
 
++ 动态映射
++ 日期检测
+
+```json
+PUT index
+{
+    "mappings": {
+        "typename": {
+            // 默认为 true 发现新数据时允许自动添加映射
+            // false 忽略，strict 抛出异常：strict_dynamic_mapping_exception
+            "dynamic": "true",
+            "date_detection": false
+        }
+    }
+}
+```
+
++ 静态映射
+
+
+
 #### 添加类别
 
 ```json
@@ -144,6 +165,8 @@ PUT /indexname
     	}
     }
 }
+
+GET /indexname/_mapping
 ```
 
 #### 映射
@@ -155,6 +178,8 @@ PUT /indexname
 > - 或一种特殊类型的图[`geo_point`](https://www.elastic.co/guide/en/elasticsearch/reference/5.4/geo-point.html)， [`geo_shape`](https://www.elastic.co/guide/en/elasticsearch/reference/5.4/geo-shape.html)或[`completion`](https://www.elastic.co/guide/en/elasticsearch/reference/5.4/search-suggesters-completion.html)。
 >
 > [数据字段类型](https://www.elastic.co/guide/en/elasticsearch/reference/5.4/mapping-types.html)
+
+![image-20200904151527822](Elasticsearch.assets/image-20200904151527822-1599449894623.png)
 
 ```json
 PUT my_index 
@@ -239,6 +264,7 @@ GET /_search
 
 GET indexname/_search
 {
+    // 其实这个 query 可以省略
     "query": {
         "match_all": {}
     }
@@ -317,10 +343,12 @@ GET blog/article/_mget
 
 /** 删
 
-> `match` ==匹配==，会使用分词器解析关键词，然后按分词匹配查找（模糊查询、效率低）
+> `match` ==匹配==，会使用分词器解析关键词（入参），然后按分词匹配查找（模糊查询、效率低）
 >
 > `term` ==匹配==，直接使用倒排索引来精确查找指定的词条（精确查询、效率高）
->
+
+
+
 > `bool` ==筛选==，会评分
 >
 > `filter` ==筛选==，执行速度非常快，不会计算相关度（直接跳过了整个评分阶段，命中则为1.0）而且很容易被缓存。
@@ -343,7 +371,7 @@ GET blog/article/_mget
 
 + filter
 
-返回的文档必须满足filter子句的条件。但是不会像Must一样，参与计算分值
+返回的文档必须满足filter子句的条件。==但是不会像Must一样，参与计算分值==
 
 + should
 
@@ -354,13 +382,14 @@ GET blog/article/_mget
 返回的文档必须不满足must_not定义的条件。
 
 ```json
-query // 查询，内含一个布尔(bool, term/match* 中一个)
+query // 查询，内含一个布尔(bool, term/terms/match* 中一个) exists range fuzzy type ids regexp prefix wildcard
 {
     bool: { // 返回布尔，内含多个布尔(must, should, must_not, filter)
         must: { // 返回布尔，内含布尔数组(数组元素为 布尔 或 布尔表达式)
             bool,
             match, // 布尔表达式，内含{"FIELD": "TEXT"}
-            term // 布尔表达式，内含{"FIELD": "TEXT"}
+            term, // 布尔表达式，内含{"FIELD": "TEXT"}
+            range, // 布尔表达式，内含{"gte": "lte"}
         }, 
         should: { // 返回布尔，内含布尔数组(数组元素为 布尔 或 布尔表达式)
             bool,
@@ -374,6 +403,7 @@ query // 查询，内含一个布尔(bool, term/match* 中一个)
         },
         filter: { // 返回布尔，内含布尔数组(数组元素为 布尔 或 布尔表达式)
             bool,
+            match, // 布尔表达式，内含{"FIELD": "TEXT"}
             term // 布尔表达式，内含{"FIELD": "TEXT"}
         }
     },
